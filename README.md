@@ -68,15 +68,21 @@ If discovery isn't finding the stick:
 
 ## Controls
 
-|                         | Normal               | Pet         | Info        | Approval    |
-| ----------------------- | -------------------- | ----------- | ----------- | ----------- |
-| **A** (front)           | next screen          | next screen | next screen | **approve** |
-| **B** (right)           | scroll transcript    | next page   | next page   | **deny**    |
-| **Hold A**              | menu                 | menu        | menu        | menu        |
-| **Power** (left, short) | toggle screen off    |             |             |             |
-| **Power** (left, ~6s)   | hard power off       |             |             |             |
-| **Shake**               | dizzy                |             |             | —           |
-| **Face-down**           | nap (energy refills) |             |             |             |
+|                         | Normal               | Pet         | Info        | Voice            | Approval    |
+| ----------------------- | -------------------- | ----------- | ----------- | ---------------- | ----------- |
+| **A** (front)           | next screen          | next screen | next screen | next screen      | **approve** |
+| **B** (right)           | scroll transcript    | next page   | next page   | **dictate (Win+H / Right Cmd)** | **deny**    |
+| **Hold B** (~0.5s)      |                      |             |             | **send (Enter)** |             |
+| **Hold A**              | menu                 | menu        | menu        | menu             | menu        |
+| **Power** (left, short) | toggle screen off    |             |             |                  |             |
+| **Power** (left, ~6s)   | hard power off       |             |             |                  |             |
+| **Shake**               | dizzy                |             |             |                  | —           |
+| **Face-down**           | nap (energy refills) |             |             |                  |             |
+
+The Voice screen turns Buddy into a one-button trigger for Windows
+dictation (`Win+H`) or macOS ASR tools (right Cmd). Toggle the host OS
+via **hold A → settings → host os**. Full walkthrough including
+pairing and troubleshooting in **[docs/voice.md](docs/voice.md)**.
 
 The screen auto-powers-off after 30s of no interaction (kept on while an
 approval prompt is up). Any button press wakes it.
