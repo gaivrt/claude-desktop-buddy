@@ -17,7 +17,8 @@ updated: 2026-05-22
 | `baseState`         | derived from tama (idle/busy/attention/celebrate)                       |
 | `activeState`       | actually rendered; `triggerOneShot` overrides for N ms                  |
 | `oneShotUntil`      | clears one-shot                                                         |
-| `displayMode`       | NORMAL / PET / INFO (cycled by A)                                       |
+| `displayMode`       | NORMAL / PET / INFO / VOICE (cycled by A; 4 modes)                      |
+| `btnBLong`          | Voice-page long-press edge latch (≥500ms → Enter)                       |
 | `infoPage` / `petPage` | sub-pages within INFO/PET (cycled by B)                              |
 | `menuOpen`, `settingsOpen`, `resetOpen` | modal stack                                       |
 | `buddyMode`, `gifAvailable` | ASCII vs GIF                                                    |
@@ -62,7 +63,7 @@ One-shot states (override base for N ms):
 ## Boot sequence (`setup`)
 
 1. `M5.begin/Imu.Init/Beep.begin`
-2. `startBt()` — advertises as `Claude-XXXX` (last 2 MAC bytes)
+2. `startBt()` — `bleInit` → `hidInit(bleGetServer())` → `bleStartAdvertising()`; device advertises as `Claude-XXXX` (last 2 MAC bytes) carrying both NUS and HID UUIDs + Keyboard appearance
 3. `statsLoad/settingsLoad/petNameLoad/buddyInit`
 4. `characterInit(nullptr)` — scans for first installed character
 5. Determine `buddyMode` from `gifAvailable` + `speciesIdxLoad()`
@@ -73,7 +74,7 @@ One-shot states (override base for N ms):
 | Menu         | Items                                                                              |
 | ------------ | ---------------------------------------------------------------------------------- |
 | **menu**     | settings, turn off, help, about, demo (toggle), close                              |
-| **settings** | brightness, sound, bluetooth, wifi, led, transcript, clock rot, ascii pet, reset, back |
+| **settings** | brightness, sound, bluetooth, wifi, led, transcript, clock rot, host os, ascii pet, reset, back |
 | **reset**    | delete char, factory reset, back — tap-twice (3s arm) confirms                     |
 
 Help → INFO page 1 (buttons), About → INFO page 5 (credits).
@@ -91,6 +92,7 @@ Help → INFO page 1 (buttons), About → INFO page 5 (credits).
 | Transcript | `drawHUD`         | NORMAL mode, no prompt, `settings.hud`   |
 | Info       | `drawInfo`        | DISP_INFO (6 pages)                      |
 | Pet        | `drawPet`         | DISP_PET (2 pages: stats, how-to)        |
+| Voice      | `drawVoice`       | DISP_VOICE — mic + linked/pair status + B hints |
 | Clock      | `drawClock`       | USB + idle + RTC valid (portrait/landscape) |
 | Passkey    | `drawPasskey`     | `blePasskey() != 0`                      |
 | Menu/settings/reset | `drawMenu` / `drawSettings` / `drawReset` | overlay                  |
@@ -120,4 +122,5 @@ GIF (if installed) → ASCII species 0 → 1 → ... → N-1 → GIF. Persisted 
 - [Clock Face](../concepts/clock-face.md)
 - [Mood / Fed / Energy](../concepts/mood-fed-energy.md)
 - [Levels & XP](../concepts/levels-xp.md)
-- [Data module](data.md), [Stats module](stats.md), [BLE Bridge](ble-bridge.md), [Character](character.md), [Buddy](buddy.md), [Xfer](xfer.md)
+- [ASR Integration](../concepts/asr-integration.md) — Voice page hotkey routing
+- [Data module](data.md), [Stats module](stats.md), [BLE Bridge](ble-bridge.md), [BLE HID](ble-hid.md), [Character](character.md), [Buddy](buddy.md), [Xfer](xfer.md)

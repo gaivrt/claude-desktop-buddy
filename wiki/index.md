@@ -19,7 +19,8 @@
 
 ## Firmware Modules
 
-- [BLE Bridge](firmware/ble-bridge.md) — NUS GATT 服务 + 加密绑定 + 行缓冲 TX/RX
+- [BLE Bridge](firmware/ble-bridge.md) — NUS GATT 服务 + 加密绑定 + 行缓冲 TX/RX；HID 共用同 server
+- [BLE HID](firmware/ble-hid.md) — BLE 键盘服务，挂在同一个 BLEServer 上，驱动 Voice 页 ASR 热键
 - [Data](firmware/data.md) — JSON 解析 + `TamaState` + demo/live/asleep 模式
 - [Xfer](firmware/xfer.md) — folder push 接收 + 非心跳命令（status/name/owner/species/unpair）
 - [Character](firmware/character.md) — LittleFS GIF / text 模式渲染 + peek + landscape
@@ -30,7 +31,8 @@
 ## Concepts
 
 - [Seven Persona States](concepts/seven-states.md) — sleep/idle/busy/attention/celebrate/dizzy/heart
-- [UI Screens](concepts/screens.md) — NORMAL/PET/INFO + menu/settings/reset + approval/passkey/clock
+- [UI Screens](concepts/screens.md) — NORMAL/PET/INFO/VOICE + menu/settings/reset + approval/passkey/clock
+- [ASR Integration](concepts/asr-integration.md) — Voice 页热键映射（mac 右 Cmd / win Win+H / 长按 Enter）
 - [Character Pack Format](concepts/character-pack.md) — manifest schema、GIF/text 模式、尺寸约束
 - [NVS Layout](concepts/nvs-layout.md) — `"buddy"` namespace 所有 keys + 写入纪律
 - [Levels & XP](concepts/levels-xp.md) — 50K tokens/级 + bridge restart 处理 + 边沿持久化

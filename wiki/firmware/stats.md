@@ -28,6 +28,7 @@ struct Stats {
 struct Settings {
   bool sound, bt, wifi, led, hud;
   uint8_t clockRot;       // 0=auto 1=portrait 2=landscape
+  uint8_t hostOs;         // 0=mac (Right Cmd), 1=win (Win+H). Default win.
 };
 ```
 
@@ -49,6 +50,7 @@ struct Settings {
 | `s_led`   | Bool    | LED                            |
 | `s_hud`   | Bool    | transcript HUD                 |
 | `s_crot`  | UChar   | clock rotation                 |
+| `s_host`  | UChar   | host OS (0=mac, 1=win)         |
 | `petname` | String  | display name                   |
 | `owner`   | String  | owner first name               |
 | `species` | UChar   | 0..N-1 or 0xFF for GIF mode    |

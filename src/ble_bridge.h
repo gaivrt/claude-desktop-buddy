@@ -15,6 +15,13 @@
 // snapshots) are written via bleWrite() and chunked to the negotiated MTU.
 
 void bleInit(const char* deviceName);
+// Returns the shared BLE server so other modules (HID) can attach services
+// on the same advertiser/connection. Valid after bleInit().
+class BLEServer;
+BLEServer* bleGetServer();
+// Begin advertising. Split from bleInit() so HID can register its service
+// UUID + appearance between init and advertise.
+void bleStartAdvertising();
 bool bleConnected();
 // True once LE Secure Connections bonding has completed for the current
 // link. The NUS characteristics are encrypted-only, so in practice this

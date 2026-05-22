@@ -2,6 +2,7 @@
 #include <LittleFS.h>
 #include <stdarg.h>
 #include "ble_bridge.h"
+#include "ble_hid.h"
 #include "data.h"
 #include "buddy.h"
 
@@ -15,7 +16,13 @@ static void startBt() {
   uint8_t mac[6] = {0};
   esp_read_mac(mac, ESP_MAC_BT);
   snprintf(btName, sizeof(btName), "Claude-%02X%02X", mac[4], mac[5]);
+  // Order matters: bleInit creates server + NUS service but does NOT start
+  // advertising; hidInit attaches HID/DIS/Battery to the same server and
+  // enrolls the HID UUID + Keyboard appearance into the advertisement;
+  // bleStartAdvertising then publishes the combined record.
   bleInit(btName);
+  hidInit(bleGetServer());
+  bleStartAdvertising();
 }
 
 #include "character.h"
@@ -45,8 +52,9 @@ bool    menuOpen    = false;
 uint8_t menuSel     = 0;
 uint8_t brightLevel = 4;           // 0..4 → ScreenBreath 20..100
 bool    btnALong    = false;
+bool    btnBLong    = false;       // Voice-mode long-press edge latch
 
-enum DisplayMode { DISP_NORMAL, DISP_PET, DISP_INFO, DISP_COUNT };
+enum DisplayMode { DISP_NORMAL, DISP_PET, DISP_INFO, DISP_VOICE, DISP_COUNT };
 uint8_t displayMode = DISP_NORMAL;
 uint8_t infoPage = 0;
 uint8_t petPage = 0;
@@ -139,8 +147,8 @@ const uint8_t MENU_N = 6;
 
 bool    settingsOpen = false;
 uint8_t settingsSel  = 0;
-const char* settingsItems[] = { "brightness", "sound", "bluetooth", "wifi", "led", "transcript", "clock rot", "ascii pet", "reset", "back" };
-const uint8_t SETTINGS_N = 10;
+const char* settingsItems[] = { "brightness", "sound", "bluetooth", "wifi", "led", "transcript", "clock rot", "host os", "ascii pet", "reset", "back" };
+const uint8_t SETTINGS_N = 11;
 
 bool    resetOpen = false;
 uint8_t resetSel  = 0;
@@ -168,9 +176,10 @@ static void applySetting(uint8_t idx) {
     case 4: s.led = !s.led; break;
     case 5: s.hud = !s.hud; break;
     case 6: s.clockRot = (s.clockRot + 1) % 3; break;
-    case 7: nextPet(); return;
-    case 8: resetOpen = true; resetSel = 0; resetConfirmIdx = 0xFF; return;
-    case 9: settingsOpen = false; characterInvalidate(); return;
+    case 7: s.hostOs = (s.hostOs + 1) % 2; break;
+    case 8: nextPet(); return;
+    case 9: resetOpen = true; resetSel = 0; resetConfirmIdx = 0xFF; return;
+    case 10: settingsOpen = false; characterInvalidate(); return;
   }
   settingsSave();
 }
@@ -274,6 +283,8 @@ static void drawSettings() {
       static const char* const RN[] = { "auto", "port", "land" };
       spr.print(RN[s.clockRot]);
     } else if (i == 7) {
+      spr.print(s.hostOs == 0 ? "mac" : "win");
+    } else if (i == 8) {
       uint8_t total = buddySpeciesCount() + (gifAvailable ? 1 : 0);
       uint8_t pos   = buddyMode ? buddySpeciesIdx() + 1 : total;
       spr.printf("%u/%u", pos, total);
@@ -887,6 +898,65 @@ void drawPet() {
   spr.printf("%u/%u", petPage + 1, PET_PAGES);
 }
 
+// Microphone icon centered around (cx, cy). About 30×42 px including stand.
+// Built from primitives so it scales with the existing TFT_eSprite API and
+// inherits the character palette like the rest of the UI.
+static void drawMicIcon(int cx, int cy, uint16_t col) {
+  const Palette& p = characterPalette();
+  // Capsule body: a 16x28 rect with rounded top and bottom
+  spr.fillRoundRect(cx - 8, cy - 16, 16, 28, 8, col);
+  // Stand: short vertical post + horizontal base
+  spr.fillRect(cx - 1, cy + 12, 2, 8, col);
+  spr.fillRect(cx - 9, cy + 19, 18, 2, col);
+  // Cradle: thin arc under the body suggesting the pickup ring
+  spr.drawCircle(cx, cy + 4, 12, col);
+  spr.drawCircle(cx, cy + 4, 11, col);
+  // Erase the upper half of the cradle so it reads as a U-shape.
+  // Use the live palette bg, not literal black — character packs can set
+  // a non-black manifest "colors.bg".
+  spr.fillRect(cx - 13, cy - 16, 26, 22, p.bg);
+  // Re-draw the body on top since the fillRect above clipped it
+  spr.fillRoundRect(cx - 8, cy - 16, 16, 28, 8, col);
+}
+
+static void drawVoice() {
+  const Palette& p = characterPalette();
+  const int TOP = 70;
+  spr.fillRect(0, TOP, W, H - TOP, p.bg);
+  spr.setTextSize(1);
+
+  // Title row mirroring INFO/PET header style
+  spr.setTextColor(p.text, p.bg);
+  spr.setCursor(4, TOP + 2);
+  spr.print("Voice");
+  spr.setTextColor(p.textDim, p.bg);
+  spr.setCursor(W - 28, TOP + 2);
+  spr.print(settings().hostOs == 0 ? " mac" : " win");
+
+  // Mic centered in the middle band
+  bool linked = hidConnected();
+  drawMicIcon(W / 2, 130, linked ? p.body : p.textDim);
+
+  // Status line below the mic
+  spr.setTextSize(1);
+  spr.setTextDatum(MC_DATUM);
+  if (linked) {
+    spr.setTextColor(GREEN, p.bg);
+    spr.drawString("linked", W / 2, 175);
+  } else {
+    spr.setTextColor(p.textDim, p.bg);
+    spr.drawString("pair in OS settings", W / 2, 175);
+  }
+  spr.setTextDatum(TL_DATUM);
+
+  // Hint row pinned to the bottom (matches drawApproval bottom-row pattern)
+  spr.setTextColor(p.textDim, p.bg);
+  spr.setCursor(4, H - 22);
+  spr.print("B: dictate");
+  spr.setCursor(W - 64, H - 22);
+  spr.print("hold B: send");
+}
+
 void drawHUD() {
   if (tama.promptId[0]) { drawApproval(); return; }
   const Palette& p = characterPalette();
@@ -1105,10 +1175,29 @@ void loop() {
     swallowBtnA = false;
   }
 
+  // Voice page B handling is release-based with a 500ms long-press for
+  // Enter (submit dictation). Detect long-press edge BEFORE the wasPressed
+  // block so the short-tap fallthrough below can be suppressed.
+  // !swallowBtnB guards against a wake-press on the Voice page firing a
+  // spurious hotkey — wake sets swallowBtnB and the full press/release
+  // cycle must be consumed, mirroring the BtnA wake-swallow pattern.
+  bool inVoice = (displayMode == DISP_VOICE) && !menuOpen && !settingsOpen
+                                              && !resetOpen && !inPrompt;
+  if (inVoice && !swallowBtnB && M5.BtnB.pressedFor(500) && !btnBLong) {
+    btnBLong = true;
+    if (hidConnected()) {
+      beep(2400, 60);
+      hidSendEnter();
+    }
+  }
+
   // BtnB: pet → heart
   if (M5.BtnB.wasPressed()) {
-    if (swallowBtnB) { swallowBtnB = false; }
-    else
+    if (swallowBtnB) {
+      // wake-press: skip the immediate-action chain but DO NOT clear
+      // swallowBtnB here — the release handler clears it after the full
+      // press-release cycle, so the release-based Voice path also skips.
+    } else
     if (inPrompt) {
       char cmd[96];
       snprintf(cmd, sizeof(cmd), "{\"cmd\":\"permission\",\"id\":\"%s\",\"decision\":\"deny\"}", tama.promptId);
@@ -1132,10 +1221,28 @@ void loop() {
       beep(2400, 30);
       petPage = (petPage + 1) % PET_PAGES;
       applyDisplayMode();
+    } else if (displayMode == DISP_VOICE) {
+      // Defer to wasReleased — short vs long differentiation needs the
+      // release edge so we don't fire dictation on every long-press hold.
     } else {
       beep(2400, 30);
       msgScroll = (msgScroll >= 30) ? 0 : msgScroll + 1;
     }
+  }
+
+  // Voice short-tap fires on release if no long-press already consumed it.
+  if (M5.BtnB.wasReleased()) {
+    if (inVoice && !btnBLong && !swallowBtnB) {
+      if (hidConnected()) {
+        beep(1800, 40);
+        // host os 0=mac: send Right GUI (Right Cmd) — SuperWhisper / WhisprFlow default
+        // host os 1=win: send Win+H — Windows 10/11 built-in dictation
+        if (settings().hostOs == 0) hidSendKey(0x00, 0xE7);
+        else                        hidSendKey(0x08, 0x0B);
+      }
+    }
+    btnBLong = false;
+    swallowBtnB = false;   // consume wake-press latch at end of release cycle
   }
 
   // blink bookkeeping
@@ -1145,6 +1252,7 @@ void loop() {
   // by the bridge. Pet sleeps underneath. Exit restores Y via
   // applyDisplayMode() so the next mode-switch isn't visually offset.
   clockRefreshRtc();   // 1Hz internal throttle; also caches _onUsb
+  hidTick();           // 60s internal throttle; refreshes BLE battery char
   // Show the clock when nothing is happening — bridge heartbeat alone
   // doesn't count as activity (it's the only way to get the RTC synced).
   bool clocking = displayMode == DISP_NORMAL
@@ -1222,6 +1330,7 @@ void loop() {
     else if (clocking) drawClock();
     else if (displayMode == DISP_INFO) drawInfo();
     else if (displayMode == DISP_PET) drawPet();
+    else if (displayMode == DISP_VOICE) drawVoice();
     else if (settings().hud) drawHUD();
     if (resetOpen) drawReset();
     else if (settingsOpen) drawSettings();

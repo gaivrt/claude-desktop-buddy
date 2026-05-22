@@ -32,6 +32,14 @@ Conflating the two would constrain the protocol to whatever the M5StickC firmwar
 - **Library deps** (`M5StickCPlus`, `AnimatedGIF`, `ArduinoJson`) — implementation details. The protocol only requires "parse JSON + speak BLE NUS"
 - **Reference impl adds non-spec commands** (`species`, `char_begin/file/chunk/file_end/char_end`) — fork-specific extensions. See [commands-acks](../protocol/commands-acks.md#reference-impl-extras-non-spec)
 
+## Non-spec extensions
+
+A fork can layer additional services on the same BLE peripheral without touching the protocol contract. This repo's Windows-target fork adds:
+
+- **BLE HID keyboard** (`src/ble_hid.{cpp,h}`) — HID + DIS + Battery services attached to the same `BLEServer` the NUS bridge owns. OS pairs as a keyboard; Claude desktop still talks NUS over the same connection. Drives the [Voice page](../concepts/screens.md#voice) ASR trigger. See [BLE HID module](../firmware/ble-hid.md) and [ASR Integration](../concepts/asr-integration.md).
+
+These are **not** required for protocol compliance — a device that only advertises NUS and parses heartbeat JSON still works as a Hardware Buddy.
+
 ## Wiki structure encodes the split
 
 - `wiki/protocol/` is authoritative

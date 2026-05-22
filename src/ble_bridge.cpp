@@ -129,8 +129,16 @@ void bleInit(const char* deviceName) {
   adv->setScanResponse(true);
   adv->setMinPreferred(0x06);   // iOS-friendly connection interval
   adv->setMaxPreferred(0x12);
+  // NOTE: startAdvertising() deferred — caller must invoke bleStartAdvertising()
+  // after hidInit() registers the HID service UUID + Keyboard appearance.
+  Serial.printf("[ble] init as '%s' (advertising pending)\n", deviceName);
+}
+
+BLEServer* bleGetServer() { return server; }
+
+void bleStartAdvertising() {
   BLEDevice::startAdvertising();
-  Serial.printf("[ble] advertising as '%s'\n", deviceName);
+  Serial.println("[ble] advertising started");
 }
 
 bool bleConnected() { return connected; }

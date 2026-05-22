@@ -14,15 +14,29 @@ Owns the BLE stack: advertises Nordic UART Service, serves the RX/TX characteris
 ## API
 
 ```cpp
-void     bleInit(const char* deviceName);
-bool     bleConnected();
-bool     bleSecure();                  // LTK negotiated for current link
-uint32_t blePasskey();                 // 6-digit pairing PIN while pending; 0 otherwise
-void     bleClearBonds();              // wipe all stored LTKs
-size_t   bleAvailable();
-int      bleRead();
-size_t   bleWrite(const uint8_t* data, size_t len);
+void        bleInit(const char* deviceName);     // creates server, services, security; DOES NOT advertise
+BLEServer*  bleGetServer();                      // shared server pointer for HID attach
+void        bleStartAdvertising();               // call AFTER hidInit registers HID UUID + Appearance
+bool        bleConnected();
+bool        bleSecure();                         // LTK negotiated for current link
+uint32_t    blePasskey();                        // 6-digit pairing PIN while pending; 0 otherwise
+void        bleClearBonds();                     // wipe all stored LTKs
+size_t      bleAvailable();
+int         bleRead();
+size_t      bleWrite(const uint8_t* data, size_t len);
 ```
+
+## HID coexistence
+
+`bleInit()` deliberately does **not** call `BLEDevice::startAdvertising()`. The `main.cpp::startBt` sequence is:
+
+```cpp
+bleInit(btName);                  // creates server + NUS service + security + enrolls NUS UUID in adv
+hidInit(bleGetServer());          // attaches HID/DIS/Battery to SAME server; enrolls HID UUID + Appearance
+bleStartAdvertising();            // single advertisement carries BOTH UUIDs
+```
+
+This is what lets the OS pair as a keyboard (HID) while the Claude desktop app subscribes to NUS notifications on the same connection. See [BLE HID module](ble-hid.md).
 
 ## Internals
 

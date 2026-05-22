@@ -26,6 +26,7 @@ All persistent state lives in one Preferences namespace: **`"buddy"`**.
 | `s_led`   | Bool    | true     | LED on attention                               |
 | `s_hud`   | Bool    | true     | transcript HUD on NORMAL                       |
 | `s_crot`  | UChar   | 0        | clock rotation (0=auto, 1=portrait, 2=landscape) |
+| `s_host`  | UChar   | 1        | host OS for HID hotkeys (0=mac, 1=win)         |
 | `petname` | String  | `Buddy`  | display name                                   |
 | `owner`   | String  | empty    | owner first name                               |
 | `species` | UChar   | `0xFF`   | 0..N-1 ASCII species, `0xFF` = GIF mode        |
