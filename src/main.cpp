@@ -4,6 +4,7 @@
 #include "ble_bridge.h"
 #include "ble_hid.h"
 #include "data.h"
+#include "voice_capture.h"
 #include "buddy.h"
 
 TFT_eSprite spr = TFT_eSprite(&M5.Lcd);
@@ -16,12 +17,11 @@ static void startBt() {
   uint8_t mac[6] = {0};
   esp_read_mac(mac, ESP_MAC_BT);
   snprintf(btName, sizeof(btName), "Claude-%02X%02X", mac[4], mac[5]);
-  // Order matters: bleInit creates server + NUS service but does NOT start
-  // advertising; hidInit attaches HID/DIS/Battery to the same server and
-  // enrolls the HID UUID + Keyboard appearance into the advertisement;
-  // bleStartAdvertising then publishes the combined record.
+  // NUS only. The BLE HID keyboard (voice 方案 A / Win+H) is intentionally NOT
+  // attached: advertising as a keyboard makes Windows grab the device for HID,
+  // which blocks Claude desktop's NUS/GATT connection. Voice 方案 B records over
+  // USB instead, so HID is no longer needed.
   bleInit(btName);
-  hidInit(bleGetServer());
   bleStartAdvertising();
 }
 
@@ -35,6 +35,12 @@ const int LED_PIN = 10;          // red LED, active-low
 // Colors used across multiple UI surfaces
 const uint16_t HOT   = 0xFA20;   // red-orange: warnings, impatience, deny
 const uint16_t PANEL = 0x2104;   // overlay panel background
+
+// Voice-screen accents (GAIVRT design system, RGB565). Terracotta is the one
+// "loud" color — used only for the live recording state.
+const uint16_t REC_ORANGE = 0xDBAA;   // #d97757 terracotta — recording
+const uint16_t READY_SAGE = 0xBE99;   // #bdd2cb sage green — ready/idle
+const uint16_t WARM_WHITE = 0xFFDE;   // #faf9f5 warm off-white — primary text
 
 enum PersonaState { P_SLEEP, P_IDLE, P_BUSY, P_ATTENTION, P_CELEBRATE, P_DIZZY, P_HEART };
 const char* stateNames[] = { "sleep", "idle", "busy", "attention", "celebrate", "dizzy", "heart" };
@@ -52,7 +58,6 @@ bool    menuOpen    = false;
 uint8_t menuSel     = 0;
 uint8_t brightLevel = 4;           // 0..4 → ScreenBreath 20..100
 bool    btnALong    = false;
-bool    btnBLong    = false;       // Voice-mode long-press edge latch
 
 enum DisplayMode { DISP_NORMAL, DISP_PET, DISP_INFO, DISP_VOICE, DISP_COUNT };
 uint8_t displayMode = DISP_NORMAL;
@@ -919,42 +924,59 @@ static void drawMicIcon(int cx, int cy, uint16_t col) {
   spr.fillRoundRect(cx - 8, cy - 16, 16, 28, 8, col);
 }
 
+// The Voice screen: hold B to dictate into the Buddy's own mic. Audio streams
+// to the PC companion over USB; the companion runs FunASR and types the Chinese
+// into the focused window (Claude desktop). Style: GAIVRT design system —
+// restrained, dark canvas, terracotta only for the live recording state.
 static void drawVoice() {
   const Palette& p = characterPalette();
   const int TOP = 70;
   spr.fillRect(0, TOP, W, H - TOP, p.bg);
   spr.setTextSize(1);
 
-  // Title row mirroring INFO/PET header style
+  bool rec = micRecording();
+  const int micY = 142;   // lowered + centered in the band below the peek
+
+  // Header, mirroring INFO/PET header style
   spr.setTextColor(p.text, p.bg);
   spr.setCursor(4, TOP + 2);
   spr.print("Voice");
-  spr.setTextColor(p.textDim, p.bg);
-  spr.setCursor(W - 28, TOP + 2);
-  spr.print(settings().hostOs == 0 ? " mac" : " win");
 
-  // Mic centered in the middle band
-  bool linked = hidConnected();
-  drawMicIcon(W / 2, 130, linked ? p.body : p.textDim);
+  // Breathing ring while recording — the design-system breathing pulse,
+  // sine-driven, ~1.2s period.
+  if (rec) {
+    float ph = (millis() % 1200) / 1200.0f;
+    float s  = 0.5f - 0.5f * cosf(ph * 2.0f * PI);   // 0..1..0
+    int   r  = 24 + (int)(11 * s);
+    spr.drawCircle(W / 2, micY + 4, r, REC_ORANGE);
+    spr.drawCircle(W / 2, micY + 4, r + 1, REC_ORANGE);
+  }
 
-  // Status line below the mic
-  spr.setTextSize(1);
+  // Mic icon: terracotta while recording, sage green when idle/ready.
+  drawMicIcon(W / 2, micY, rec ? REC_ORANGE : READY_SAGE);
+
+  // Status line just below the mic. (Level meter removed per design feedback —
+  // the breathing ring + orange mic are the recording cue.)
   spr.setTextDatum(MC_DATUM);
-  if (linked) {
-    spr.setTextColor(GREEN, p.bg);
-    spr.drawString("linked", W / 2, 175);
+  if (rec) {
+    uint32_t ms = micElapsedMs();
+    char t[20];
+    snprintf(t, sizeof(t), "REC  %lu:%02lu", (unsigned long)(ms / 60000),
+             (unsigned long)((ms / 1000) % 60));
+    spr.setTextColor(REC_ORANGE, p.bg);
+    spr.drawString(t, W / 2, micY + 46);
   } else {
-    spr.setTextColor(p.textDim, p.bg);
-    spr.drawString("pair in OS settings", W / 2, 175);
+    spr.setTextColor(READY_SAGE, p.bg);
+    spr.drawString("ready", W / 2, micY + 46);
   }
   spr.setTextDatum(TL_DATUM);
 
-  // Hint row pinned to the bottom (matches drawApproval bottom-row pattern)
+  // Hint row pinned to the bottom
   spr.setTextColor(p.textDim, p.bg);
   spr.setCursor(4, H - 22);
-  spr.print("B: dictate");
-  spr.setCursor(W - 64, H - 22);
-  spr.print("hold B: send");
+  spr.print("hold B: talk");
+  spr.setCursor(W - 58, H - 22);
+  spr.print("tap: send");
 }
 
 void drawHUD() {
@@ -1007,9 +1029,12 @@ void drawHUD() {
 
 void setup() {
   M5.begin();
+  // Serial stays at M5.begin()'s 115200 — high bauds are unreliable on this
+  // board's FTDI, so audio is IMA-ADPCM compressed (4:1) to fit 115200.
   M5.Lcd.setRotation(0);
   M5.Imu.Init();
   M5.Beep.begin();
+  micInit();              // SPM1423 PDM mic (I2S0), drives the Voice screen
   startBt();
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);   // off
@@ -1175,21 +1200,9 @@ void loop() {
     swallowBtnA = false;
   }
 
-  // Voice page B handling is release-based with a 500ms long-press for
-  // Enter (submit dictation). Detect long-press edge BEFORE the wasPressed
-  // block so the short-tap fallthrough below can be suppressed.
-  // !swallowBtnB guards against a wake-press on the Voice page firing a
-  // spurious hotkey — wake sets swallowBtnB and the full press/release
-  // cycle must be consumed, mirroring the BtnA wake-swallow pattern.
-  bool inVoice = (displayMode == DISP_VOICE) && !menuOpen && !settingsOpen
-                                              && !resetOpen && !inPrompt;
-  if (inVoice && !swallowBtnB && M5.BtnB.pressedFor(500) && !btnBLong) {
-    btnBLong = true;
-    if (hidConnected()) {
-      beep(2400, 60);
-      hidSendEnter();
-    }
-  }
+  // Voice page B is hold-to-talk: the wasPressed chain below starts recording,
+  // and wasReleased decides tap (submit) vs hold (transcribe). swallowBtnB
+  // still guards a wake-press from firing a spurious recording.
 
   // BtnB: pet → heart
   if (M5.BtnB.wasPressed()) {
@@ -1222,26 +1235,26 @@ void loop() {
       petPage = (petPage + 1) % PET_PAGES;
       applyDisplayMode();
     } else if (displayMode == DISP_VOICE) {
-      // Defer to wasReleased — short vs long differentiation needs the
-      // release edge so we don't fire dictation on every long-press hold.
+      // Hold-to-talk: start recording on press; release decides tap vs hold.
+      // Skip if the mic failed init or a USB OTA is in flight (shared TX).
+      if (micReady() && !xferActive()) { micStartRec(); beep(1800, 30); }
     } else {
       beep(2400, 30);
       msgScroll = (msgScroll >= 30) ? 0 : msgScroll + 1;
     }
   }
 
-  // Voice short-tap fires on release if no long-press already consumed it.
+  // Voice release: a real hold ends the recording (PC transcribes + types the
+  // Chinese); a quick tap (<300ms, basically no speech) means submit → Enter.
+  // Guarded on micRecording() so a recording always ends on release even if A
+  // navigated away mid-hold.
   if (M5.BtnB.wasReleased()) {
-    if (inVoice && !btnBLong && !swallowBtnB) {
-      if (hidConnected()) {
-        beep(1800, 40);
-        // host os 0=mac: send Right GUI (Right Cmd) — SuperWhisper / WhisprFlow default
-        // host os 1=win: send Win+H — Windows 10/11 built-in dictation
-        if (settings().hostOs == 0) hidSendKey(0x00, 0xE7);
-        else                        hidSendKey(0x08, 0x0B);
-      }
+    if (micRecording()) {
+      // <300ms held → tap (submit/Enter); longer → real dictation. Read elapsed
+      // time before stopping, since micElapsedMs() needs _micRec still true.
+      if (micElapsedMs() < 300) { micTapSubmit(); beep(2400, 40); }
+      else                      { micStopRec();   beep(1200, 40); }
     }
-    btnBLong = false;
     swallowBtnB = false;   // consume wake-press latch at end of release cycle
   }
 
@@ -1252,7 +1265,7 @@ void loop() {
   // by the bridge. Pet sleeps underneath. Exit restores Y via
   // applyDisplayMode() so the next mode-switch isn't visually offset.
   clockRefreshRtc();   // 1Hz internal throttle; also caches _onUsb
-  hidTick();           // 60s internal throttle; refreshes BLE battery char
+  micTick();           // stream mic audio while the Voice screen is recording
   // Show the clock when nothing is happening — bridge heartbeat alone
   // doesn't count as activity (it's the only way to get the RTC synced).
   bool clocking = displayMode == DISP_NORMAL

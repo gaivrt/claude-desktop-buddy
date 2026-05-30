@@ -6,6 +6,13 @@ updated: 2026-05-23
 
 # ASR Integration
 
+> ⚠ **Removed / historical.** This 方案 A — Win+H (Windows) / Right-Cmd (mac) via a
+> BLE HID keyboard — was **superseded and the HID keyboard removed**. The Voice
+> screen now records the Buddy's own mic for Chinese dictation; see
+> [Voice ASR](../decisions/voice-asr.md) and [Voice Capture](../firmware/voice-capture.md).
+> HID was removed because on Windows it made the OS claim the device as a keyboard,
+> starving Claude desktop's NUS link. This page is kept for history.
+
 The Voice page turns Buddy into a one-button trigger for the host OS's dictation tool. Default behavior:
 
 | `settings.hostOs` | Short B (release)         | Long B (≥500ms)  | Use case                                              |
@@ -79,8 +86,17 @@ If the user clicks "Forget" in OS Bluetooth, the OS sends `cmd:"unpair"` over NU
 | `0x28`    | HID usage: Enter                                               |
 | `0x03C1`  | BLE Appearance: Keyboard                                       |
 
+## Relation to Voice ASR via Buddy mic (方案 B)
+
+This page describes **方案 A**: the Buddy is a remote *trigger* — B sends `Win+H`
+and the **PC's** mic + Windows dictation do the work. A separate fork feature,
+[Voice ASR](../decisions/voice-asr.md), records on the **Buddy's own** mic and
+transcribes with FunASR instead. For that fork's Chinese-dictation use case, 方案 B
+**supersedes** this Win+H path (HID then goes unused for voice).
+
 ## See Also
 
+- [Voice ASR via Buddy Mic](../decisions/voice-asr.md) — 方案 B, the superseding approach
 - [BLE HID module](../firmware/ble-hid.md)
 - [Voice Screen](screens.md#voice)
 - [Main / UI](../firmware/main.md) — button state machine

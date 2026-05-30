@@ -32,15 +32,18 @@ Buddy peeks at top (half-scale) via `characterSetPeek(true)`. Header: `<owner>'s
 
 ## VOICE
 
-ASR trigger page. Buddy peeks at top (half-scale). Header: `Voice  mac` / `Voice  win` based on `settings.hostOs`. Center: microphone icon (body color when HID linked, dim when not). Status line: "linked" green / "pair in OS settings" dim. Bottom hint: `B: dictate    hold B: send`.
+Chinese voice-input page (方案 B). Buddy peeks at top (half-scale). Header `Voice`.
+Center: a microphone icon — **sage green when idle, terracotta + a breathing ring while
+recording** (GAIVRT design system). Status line: `ready` / `REC m:ss`. Bottom hint:
+`hold B: talk    tap: send`.
 
-B handling is **release-based** (so short vs long tap can be distinguished):
-- Short tap (release < 500ms) → host-OS-specific hotkey:
-  - mac: Right Cmd (HID `0xE7`) — SuperWhisper / WhisprFlow default
-  - win: Win+H (HID `0x08, 0x0B`) — Windows 10/11 dictation
-- Long press (≥500ms) → Enter (HID `0x28`) — submit dictation
+B handling (this page only, via [voice_capture.h](../firmware/voice-capture.md)):
+- **press** → start recording (SPM1423 mic → IMA-ADPCM → USB serial)
+- **release** → if held <300 ms, send (Enter); else stop + transcribe. The PC companion
+  runs FunASR and types + **auto-sends** the Chinese into the focused window.
 
-Sends nothing when `hidConnected() == false`. Scoped strictly to this page — B on other pages keeps its original behavior. See [ASR Integration](asr-integration.md) for the full hotkey table and rationale.
+Scoped strictly to this page — B on other pages keeps its original behavior. The old
+Win+H / HID trigger was removed; see [Voice ASR](../decisions/voice-asr.md).
 
 ## INFO (6 pages)
 

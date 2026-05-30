@@ -18,7 +18,7 @@ updated: 2026-05-22
 | `activeState`       | actually rendered; `triggerOneShot` overrides for N ms                  |
 | `oneShotUntil`      | clears one-shot                                                         |
 | `displayMode`       | NORMAL / PET / INFO / VOICE (cycled by A; 4 modes)                      |
-| `btnBLong`          | Voice-page long-press edge latch (≥500ms → Enter)                       |
+| `btnBLong`          | *(removed)* — was the Win+H long-press→Enter latch (HID gone)            |
 | `infoPage` / `petPage` | sub-pages within INFO/PET (cycled by B)                              |
 | `menuOpen`, `settingsOpen`, `resetOpen` | modal stack                                       |
 | `buddyMode`, `gifAvailable` | ASCII vs GIF                                                    |
@@ -63,7 +63,7 @@ One-shot states (override base for N ms):
 ## Boot sequence (`setup`)
 
 1. `M5.begin/Imu.Init/Beep.begin`
-2. `startBt()` — `bleInit` → `hidInit(bleGetServer())` → `bleStartAdvertising()`; device advertises as `Claude-XXXX` (last 2 MAC bytes) carrying both NUS and HID UUIDs + Keyboard appearance
+2. `startBt()` — `bleInit` → `bleStartAdvertising()`; advertises as `Claude-XXXX` (last 2 MAC bytes), **NUS only** (`hidInit` removed — it broke Claude desktop on Windows; see [Voice ASR](../decisions/voice-asr.md)). `setup()` also calls `micInit()` for the Voice screen
 3. `statsLoad/settingsLoad/petNameLoad/buddyInit`
 4. `characterInit(nullptr)` — scans for first installed character
 5. Determine `buddyMode` from `gifAvailable` + `speciesIdxLoad()`
@@ -92,7 +92,7 @@ Help → INFO page 1 (buttons), About → INFO page 5 (credits).
 | Transcript | `drawHUD`         | NORMAL mode, no prompt, `settings.hud`   |
 | Info       | `drawInfo`        | DISP_INFO (6 pages)                      |
 | Pet        | `drawPet`         | DISP_PET (2 pages: stats, how-to)        |
-| Voice      | `drawVoice`       | DISP_VOICE — mic + linked/pair status + B hints |
+| Voice      | `drawVoice`       | DISP_VOICE — Buddy-mic Chinese dictation (hold B); see [Voice Capture](voice-capture.md) |
 | Clock      | `drawClock`       | USB + idle + RTC valid (portrait/landscape) |
 | Passkey    | `drawPasskey`     | `blePasskey() != 0`                      |
 | Menu/settings/reset | `drawMenu` / `drawSettings` / `drawReset` | overlay                  |
@@ -122,5 +122,6 @@ GIF (if installed) → ASCII species 0 → 1 → ... → N-1 → GIF. Persisted 
 - [Clock Face](../concepts/clock-face.md)
 - [Mood / Fed / Energy](../concepts/mood-fed-energy.md)
 - [Levels & XP](../concepts/levels-xp.md)
-- [ASR Integration](../concepts/asr-integration.md) — Voice page hotkey routing
+- [Voice Capture](voice-capture.md) — Voice screen mic capture (方案 B, current)
+- [ASR Integration](../concepts/asr-integration.md) — old Win+H/HID routing (removed)
 - [Data module](data.md), [Stats module](stats.md), [BLE Bridge](ble-bridge.md), [BLE HID](ble-hid.md), [Character](character.md), [Buddy](buddy.md), [Xfer](xfer.md)

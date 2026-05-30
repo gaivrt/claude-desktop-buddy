@@ -7,6 +7,12 @@ updated: 2026-05-23
 
 # `ble_hid` — BLE HID keyboard attached to the shared server
 
+> ⚠ **No longer wired up.** `hidInit()` / `hidTick()` were removed from `startBt` /
+> `loop` — advertising as a keyboard made Windows claim the device for HID and
+> starve Claude desktop's NUS link ("pairs then disconnects"). These files remain
+> for reference but are not in the active path. The Voice screen now uses
+> [Voice Capture](voice-capture.md) (方案 B); see [Voice ASR](../decisions/voice-asr.md).
+
 ## Responsibility
 
 Adds a BLE HID keyboard (plus DIS + Battery services) to the **same** `BLEServer` the [NUS bridge](ble-bridge.md) creates. macOS / Windows Bluetooth settings pair the device as a regular keyboard; the Claude desktop app still talks NUS over the same connection. Drives the [Voice screen](../concepts/screens.md#voice) ASR hotkey.

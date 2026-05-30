@@ -71,18 +71,20 @@ If discovery isn't finding the stick:
 |                         | Normal               | Pet         | Info        | Voice            | Approval    |
 | ----------------------- | -------------------- | ----------- | ----------- | ---------------- | ----------- |
 | **A** (front)           | next screen          | next screen | next screen | next screen      | **approve** |
-| **B** (right)           | scroll transcript    | next page   | next page   | **dictate (Win+H / Right Cmd)** | **deny**    |
-| **Hold B** (~0.5s)      |                      |             |             | **send (Enter)** |             |
+| **B** (right)           | scroll transcript    | next page   | next page   | **hold: 说中文 (Buddy mic)** | **deny**    |
+| **Release B**           |                      |             |             | **转写 + 自动发送** |             |
 | **Hold A**              | menu                 | menu        | menu        | menu             | menu        |
 | **Power** (left, short) | toggle screen off    |             |             |                  |             |
 | **Power** (left, ~6s)   | hard power off       |             |             |                  |             |
 | **Shake**               | dizzy                |             |             |                  | —           |
 | **Face-down**           | nap (energy refills) |             |             |                  |             |
 
-The Voice screen turns Buddy into a one-button trigger for Windows
-dictation (`Win+H`) or macOS ASR tools (right Cmd). Toggle the host OS
-via **hold A → settings → host os**. Full walkthrough including
-pairing and troubleshooting in **[docs/voice.md](docs/voice.md)**.
+The **Voice screen** turns Buddy into a Chinese voice-input button: hold **B**
+and talk into Buddy's own mic, release, and your speech is transcribed locally
+(via [FunASR](https://github.com/modelscope/FunASR)) then typed — and auto-sent —
+into Claude desktop. It needs the PC companion running (`companion/`, or just
+double-click `start-voice.bat`). **Full beginner setup guide (中文):
+[docs/chinese-voice-input.html](docs/chinese-voice-input.html).**
 
 The screen auto-powers-off after 30s of no interaction (kept on while an
 approval prompt is up). Any button press wakes it.
@@ -159,16 +161,20 @@ If you're iterating on a character and would rather skip the BLE round-trip,
 
 ```
 src/
-  main.cpp       — loop, state machine, UI screens
-  buddy.cpp      — ASCII species dispatch + render helpers
-  buddies/       — one file per species, seven anim functions each
-  ble_bridge.cpp — Nordic UART service, line-buffered TX/RX
-  character.cpp  — GIF decode + render
-  data.h         — wire protocol, JSON parse
-  xfer.h         — folder push receiver
-  stats.h        — NVS-backed stats, settings, owner, species choice
-characters/      — example GIF character packs
-tools/           — generators and converters
+  main.cpp        — loop, state machine, UI screens
+  buddy.cpp       — ASCII species dispatch + render helpers
+  buddies/        — one file per species, seven anim functions each
+  ble_bridge.cpp  — Nordic UART service, line-buffered TX/RX
+  voice_capture.h — SPM1423 mic → IMA-ADPCM → USB serial (Voice screen)
+  character.cpp   — GIF decode + render
+  data.h          — wire protocol, JSON parse
+  xfer.h          — folder push receiver
+  stats.h         — NVS-backed stats, settings, owner, species choice
+companion/        — PC-side Chinese voice input (FunASR + SendInput)
+start-voice.bat   — launch the voice companion
+docs/chinese-voice-input.html — beginner setup guide
+characters/       — example GIF character packs
+tools/            — generators and converters
 ```
 
 ## Availability

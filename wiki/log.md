@@ -65,3 +65,42 @@
 - HID 是 fork-specific 扩展，不影响 REFERENCE.md 协议契约（见 `decisions/protocol-vs-implementation.md` Non-spec 段）
 - HID 服务始终在线，但 B 按键仅在 Voice 页路由到 HID — 其他屏 B 保持原行为
 - 双模式而非纯 Windows fork：盖尔可能未来切回 macOS 设备时立即可用
+
+## [2026-05-30] ingest | Voice ASR via Buddy mic（方案 B，Phase 0 排雷）
+
+新增 fork 功能设计：用 Buddy 自己的 SPM1423 麦克风录中文，离线 FunASR 转写，SendInput 注入 Claude desktop 输入框。区别于已有的 Win+H 触发（方案 A）。
+
+**新文件**：
+- `wiki/decisions/voice-asr.md` — 方案 B 决策页：三硬约束（ESP32 跑不了 ASR / 音频必须外送 / CJK 必须 PC 端 SendInput 注入）、双通道传输（USB 主 / BLE 次）、**BLE 与 Claude desktop 抢单连接的坑**、组件事实、Phase 0 验证结果、分阶段计划
+- `spikes/mic/`（固件 + listen.py）、`spikes/asr/`（transcribe.py）、`spikes/inject/`（inject.py）— Phase 0 排雷代码
+
+**编辑（chain-update）**：
+- `wiki/decisions/protocol-vs-implementation.md` — Non-spec extensions 增加 voice-asr 一条
+- `wiki/concepts/asr-integration.md` — 新增"Relation to 方案 B"段 + See Also 交叉链接，标注 Win+H 路径被 fork 取代
+- `wiki/index.md` — Decisions 区新增 voice-asr 条目
+
+**Phase 0 排雷结果（全 PASS）**：
+- 0a 麦克风：peak 7329/32767、rms 1583、0 静音/削顶 → SPM1423 音质可用
+- 0b FunASR：真实 Buddy 录音转出「你好，好久不见。」准确带标点，0.6s/3s，模型加载 ~52s（companion 须常驻）
+- 0c 注入：中文成功落进 Claude desktop（修 WinError 87：INPUT 结构须 40B 全 union + 设 argtypes）
+
+**关键决策**：
+- 方案 B 必然需要 PC companion（CJK 注入只能 PC 端做）；现有 BLE HID/Win+H 在此用例被取代
+- USB 有线是干净主路径（与 Claude desktop 的 BLE 链路物理隔离）；BLE 无线（Phase 2）须先解决"和 Claude desktop 共享 BLE 外设"冲突
+- 先排雷（Phase 0）再搭链路，每个未知数独立验证
+
+## [2026-05-30] ship + lint | Voice ASR 方案 B 上线 + wiki 对齐
+
+Phase 1 完成并整合进主固件，端到端可用：hold B → SPM1423 麦克风 → IMA-ADPCM 4:1 → USB 串口 115200（带帧同步）→ PC companion 解码 → FunASR 转写 → SendInput 注入 + 自动回车发送进 Claude desktop。
+
+**实现 vs 设计阶段的偏差（lint 修正项）**：
+- **波特率**：高波特率（921600 / 1Mbaud，160/240MHz）在本板 FTDI 上全乱码 → 退回可靠的 115200 + IMA-ADPCM 压缩塞进带宽（硬件坑，换板子可省 ADPCM）
+- **删 HID**：原 BLE HID 键盘在 Windows 抢设备、挤掉 Claude desktop 的 NUS 连接（"连上就掉"）→ `hidInit`/`hidTick` 从 startBt/loop 移除，纯 NUS
+- **传输**：只做 USB（Phase 2 BLE 无线已放弃：抢 Claude desktop 的单连接 + BLE 带宽紧）
+- **UI**：删电平条、麦克风下移居中（用户反馈）；**自动发送**：注入后自动 Enter
+
+**新文件**：`src/voice_capture.h`、`companion/`（main.py + inject.py，含自动重连）、`start-voice.bat` / `start-voice-hidden.vbs`、`docs/chinese-voice-input.html`（小白安装指南，设计系统风格）。
+
+**wiki 更新**：重写 `decisions/voice-asr.md`；新建 `firmware/voice-capture.md`；`concepts/asr-integration.md`、`firmware/ble-hid.md`、`decisions/protocol-vs-implementation.md` 标注 HID 已移除；更新 `concepts/screens.md`、`firmware/main.md`、`index.md`、`README.md`。
+
+**lint 结论**：过时项已全部对齐；asr-integration / ble-hid 保留为历史并标注移除原因，非孤立。

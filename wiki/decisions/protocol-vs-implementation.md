@@ -36,7 +36,8 @@ Conflating the two would constrain the protocol to whatever the M5StickC firmwar
 
 A fork can layer additional services on the same BLE peripheral without touching the protocol contract. This repo's Windows-target fork adds:
 
-- **BLE HID keyboard** (`src/ble_hid.{cpp,h}`) — HID + DIS + Battery services attached to the same `BLEServer` the NUS bridge owns. OS pairs as a keyboard; Claude desktop still talks NUS over the same connection. Drives the [Voice page](../concepts/screens.md#voice) ASR trigger. See [BLE HID module](../firmware/ble-hid.md) and [ASR Integration](../concepts/asr-integration.md).
+- **BLE HID keyboard** (`src/ble_hid.{cpp,h}`) — **removed.** Once drove a Win+H dictation trigger, but advertising as a keyboard made Windows grab the device and starve Claude desktop's NUS link, so `hidInit()` is no longer called. Files kept but unwired. See [BLE HID module](../firmware/ble-hid.md).
+- **Voice ASR via Buddy mic** (`src/voice_capture.h` + a PC companion) — record on the Buddy's own SPM1423 mic, IMA-ADPCM over USB serial, transcribe with FunASR, inject Chinese via SendInput into the focused window. The active fork feature. See [Voice ASR](voice-asr.md) and [Voice Capture](../firmware/voice-capture.md).
 
 These are **not** required for protocol compliance — a device that only advertises NUS and parses heartbeat JSON still works as a Hardware Buddy.
 

@@ -20,7 +20,8 @@
 ## Firmware Modules
 
 - [BLE Bridge](firmware/ble-bridge.md) — NUS GATT 服务 + 加密绑定 + 行缓冲 TX/RX；HID 共用同 server
-- [BLE HID](firmware/ble-hid.md) — BLE 键盘服务，挂在同一个 BLEServer 上，驱动 Voice 页 ASR 热键
+- [BLE HID](firmware/ble-hid.md) — BLE 键盘服务（⚠ 已移除接线：Win+H 用，在 Windows 抢设备、挤掉 Claude desktop 的 NUS）
+- [Voice Capture](firmware/voice-capture.md) — SPM1423 麦克风→IMA-ADPCM→USB 串口，驱动 Voice 屏中文听写（方案 B）
 - [Data](firmware/data.md) — JSON 解析 + `TamaState` + demo/live/asleep 模式
 - [Xfer](firmware/xfer.md) — folder push 接收 + 非心跳命令（status/name/owner/species/unpair）
 - [Character](firmware/character.md) — LittleFS GIF / text 模式渲染 + peek + landscape
@@ -32,7 +33,7 @@
 
 - [Seven Persona States](concepts/seven-states.md) — sleep/idle/busy/attention/celebrate/dizzy/heart
 - [UI Screens](concepts/screens.md) — NORMAL/PET/INFO/VOICE + menu/settings/reset + approval/passkey/clock
-- [ASR Integration](concepts/asr-integration.md) — Voice 页热键映射（mac 右 Cmd / win Win+H / 长按 Enter）
+- [ASR Integration](concepts/asr-integration.md) — ⚠ 历史：旧 Win+H/HID 触发，已被方案 B 取代并移除
 - [Character Pack Format](concepts/character-pack.md) — manifest schema、GIF/text 模式、尺寸约束
 - [NVS Layout](concepts/nvs-layout.md) — `"buddy"` namespace 所有 keys + 写入纪律
 - [Levels & XP](concepts/levels-xp.md) — 50K tokens/级 + bridge restart 处理 + 边沿持久化
@@ -54,3 +55,4 @@
 
 - [Governance](decisions/governance.md) — 为什么只接 reference 性修复，新功能去 fork
 - [Protocol vs Implementation](decisions/protocol-vs-implementation.md) — 两层独立的稳定性边界
+- [Voice ASR via Buddy Mic](decisions/voice-asr.md) — 方案 B（已上线）：Buddy 麦克风→IMA-ADPCM/USB 115200→FunASR→SendInput 自动发送进 Claude desktop；删 HID + 高波特率硬件坑

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中文语音输入 · Claude Desktop Buddy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #faf9f5;
+    --bg-soft:   #f0ede4;
+    --beige:     #e4dbcd;
+    --ink:       #3a3733;
+    --dim:       rgba(80, 75, 65, 0.58);
+    --faint:     rgba(80, 75, 65, 0.30);
+    --line:      rgba(80, 75, 65, 0.15);
+    --terra:     #d97757;
+    --sage:      #bdd2cb;
+    --blue:      #6a9ccd;
+    --serif:     Cambria, "Songti SC", "SimSun", Georgia, serif;
+    --display:   Georgia, "Songti SC", serif;
+    --ui:        Inter, system-ui, -apple-system, sans-serif;
+    --mono:      "Fira Code", "Fira Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--serif); font-size: 18px; line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 28px 120px; }
+
+  /* hero */
+  header.hero { padding: 92px 0 28px; }
+  .kicker {
+    font-family: var(--ui); font-size: 12px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--terra); font-weight: 600;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 700; font-size: 46px;
+    line-height: 1.15; letter-spacing: -0.01em; margin: 0 0 18px;
+  }
+  .lede { font-size: 21px; color: var(--dim); margin: 0; max-width: 38ch; }
+
+  /* sections */
+  section { padding-top: 56px; }
+  h2 {
+    font-family: var(--display); font-weight: 700; font-size: 30px;
+    margin: 0 0 8px; letter-spacing: -0.01em; scroll-margin-top: 24px;
+  }
+  h2 .n {
+    font-family: var(--ui); font-size: 14px; font-weight: 600;
+    color: var(--terra); letter-spacing: 0.1em; margin-right: 12px;
+    vertical-align: 6px;
+  }
+  h3 { font-family: var(--display); font-weight: 700; font-size: 20px; margin: 34px 0 6px; }
+  p { margin: 14px 0; }
+  a { color: var(--blue); text-decoration: none; border-bottom: 1px solid transparent; }
+  a:hover { border-bottom-color: var(--blue); }
+  strong { font-weight: 600; }
+  hr { border: none; border-top: 1px solid var(--line); margin: 56px 0 0; }
+
+  /* labels in UI font */
+  .label { font-family: var(--ui); font-size: 13px; letter-spacing: 0.12em;
+           text-transform: uppercase; color: var(--dim); }
+
+  /* code */
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--bg-soft);
+         padding: 2px 6px; border-radius: 4px; }
+  pre {
+    font-family: var(--mono); font-size: 14px; line-height: 1.6;
+    background: var(--bg-soft); border-left: 3px solid var(--terra);
+    border-radius: 8px; padding: 18px 20px; overflow-x: auto; margin: 18px 0;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .cmt { color: var(--faint); }
+
+  /* callouts */
+  .note { border-left: 3px solid var(--sage); background: rgba(189, 210, 203, 0.16);
+          border-radius: 8px; padding: 14px 20px; margin: 22px 0; font-size: 16.5px; }
+  .warn { border-left: 3px solid var(--terra); background: rgba(217, 119, 87, 0.08);
+          border-radius: 8px; padding: 14px 20px; margin: 22px 0; font-size: 16.5px; }
+  .note .label, .warn .label { display: block; margin-bottom: 4px; }
+  .note .label { color: #6f8e83; }
+  .warn .label { color: var(--terra); }
+
+  /* pipeline */
+  .pipeline { margin: 30px 0 12px; }
+  .node {
+    background: var(--beige); border-radius: 12px; padding: 16px 22px;
+    text-align: center; border: 1px solid var(--line);
+  }
+  .node.live { background: rgba(217, 119, 87, 0.12); border-color: rgba(217, 119, 87, 0.35); }
+  .node-main { font-family: var(--display); font-weight: 700; font-size: 18px; }
+  .node-sub { font-family: var(--ui); font-size: 12.5px; color: var(--dim);
+              letter-spacing: 0.04em; margin-top: 2px; }
+  .arrow { text-align: center; color: var(--terra); padding: 7px 0; }
+  .arrow .a { font-size: 18px; line-height: 1; }
+  .arrow .t { font-family: var(--ui); font-size: 12px; color: var(--dim);
+              letter-spacing: 0.06em; margin-left: 8px; }
+
+  /* steps */
+  ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 24px 0; }
+  ol.steps > li { position: relative; padding: 0 0 4px 46px; margin-bottom: 24px; }
+  ol.steps > li::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; left: 0; top: 1px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    font-family: var(--ui); font-weight: 600; font-size: 14px;
+    color: var(--terra); display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li h3 { margin-top: 0; }
+
+  /* spec table */
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 16px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { font-family: var(--ui); font-size: 12px; letter-spacing: 0.08em;
+       text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  td:first-child { font-family: var(--ui); font-size: 14px; color: var(--ink); white-space: nowrap; }
+
+  /* key combo */
+  kbd { font-family: var(--ui); font-size: 12px; background: var(--bg-soft);
+        border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px;
+        padding: 2px 7px; color: var(--ink); }
+
+  footer { margin-top: 80px; padding-top: 28px; border-top: 1px solid var(--line);
+           font-family: var(--ui); font-size: 14px; color: var(--dim); }
+
+  @media (max-width: 600px) {
+    body { font-size: 17px; }
+    h1 { font-size: 36px; }
+    h2 { font-size: 25px; }
+    .wrap { padding: 0 20px 90px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Claude Desktop Buddy · Fork Feature</div>
+  <h1>中文语音输入</h1>
+  <p class="lede">按住桌面宠物的一个按钮说话，中文自动转写并发给 Claude。</p>
+</header>
+
+<section id="what">
+  <h2><span class="n">01</span>这是什么</h2>
+  <p>
+    <a href="https://github.com/anthropics/claude-desktop-buddy">Claude Desktop Buddy</a>
+    是一只跑在 <strong>M5StickC Plus</strong> 上的桌面宠物，通过蓝牙陪伴你的 Claude 会话。
+    这个 fork 给它加了一项能力：<strong>把宠物变成一个中文语音输入按钮</strong>。
+  </p>
+  <p>
+    你<strong>按住宠物的 B 键</strong>对着它说中文，松手后——几秒内，你说的话就
+    <strong>自动变成文字、自动发送</strong>到电脑上的 Claude desktop。全程只碰宠物一个键，
+    转写在本地完成（用阿里 <a href="https://github.com/modelscope/FunASR">FunASR</a>），
+    不依赖联网识别。
+  </p>
+  <div class="note">
+    <span class="label">一句话</span>
+    宠物 = 一个对着说中文、自动发给 Claude 的硬件听写按钮。
+  </div>
+</section>
+
+<section id="how">
+  <h2><span class="n">02</span>工作原理</h2>
+  <p>声音从宠物的麦克风出发，经过四段，落进 Claude 的输入框：</p>
+  <div class="pipeline">
+    <div class="node">
+      <div class="node-main">Buddy 麦克风</div>
+      <div class="node-sub">SPM1423 PDM · 16 kHz / 16-bit</div>
+    </div>
+    <div class="arrow"><span class="a">↓</span><span class="t">IMA ADPCM 4:1 压缩</span></div>
+    <div class="node">
+      <div class="node-main">USB 串口 · 115200</div>
+      <div class="node-sub">设备 → 电脑，带帧同步</div>
+    </div>
+    <div class="arrow"><span class="a">↓</span><span class="t">Python companion 解码</span></div>
+    <div class="node">
+      <div class="node-main">FunASR</div>
+      <div class="node-sub">paraformer-zh · 本地离线转写</div>
+    </div>
+    <div class="arrow"><span class="a">↓</span><span class="t">SendInput 注入 Unicode</span></div>
+    <div class="node live">
+      <div class="node-main">Claude Desktop 输入框</div>
+      <div class="node-sub">自动落字 + 自动回车发送</div>
+    </div>
+  </div>
+  <p>
+    宠物本身跑不动语音模型，所以它只负责<strong>采音 + 压缩 + 通过 USB 吐出去</strong>；
+    电脑上一个常驻的小程序（companion）负责<strong>转写 + 把中文打进当前窗口</strong>。
+    两件事各司其职。
+  </p>
+</section>
+
+<section id="need">
+  <h2><span class="n">03</span>你需要什么</h2>
+  <table>
+    <tr><th>项目</th><th>说明</th></tr>
+    <tr><td>M5StickC Plus</td><td>ESP32 + 内置 SPM1423 麦克风 + 屏幕 + A/B 按钮。本固件就是为它写的。</td></tr>
+    <tr><td>一台 Windows 电脑</td><td>转写和文字注入在电脑上跑。目前 companion 是 Windows 版（用 <code>SendInput</code> 注入）。</td></tr>
+    <tr><td>Claude desktop</td><td>语音转出的中文会打进它的输入框。其实打进任何聚焦的输入框都行。</td></tr>
+    <tr><td>USB-C 数据线</td><td>烧录 + 运行时宠物都通过它连电脑（音频走这条线）。</td></tr>
+    <tr><td><a href="https://docs.astral.sh/uv/">uv</a></td><td>Python 包管理器，用来跑 companion。首次会自动装好 FunASR / PyTorch 等依赖。</td></tr>
+    <tr><td>联网（仅首次）</td><td>FunASR 模型首次约下载 1 GB；之后完全离线运行。</td></tr>
+  </table>
+</section>
+
+<section id="setup">
+  <h2><span class="n">04</span>从零开始安装</h2>
+  <p>
+    这一节假设你电脑上<strong>什么都还没装</strong>。照着每一步做就行，一共六步：
+    装三个工具 → 拿到代码 → 烧录固件 → 启动程序。命令都在
+    <strong>PowerShell</strong> 里运行（开始菜单搜 “PowerShell” 打开它）。
+  </p>
+
+  <ol class="steps">
+    <li>
+      <h3>装 git（用来下载代码）</h3>
+      <p>
+        去 <a href="https://git-scm.com/download/win">git-scm.com</a> 下载 Windows 版安装包，
+        一路点「下一步」用默认设置装完即可。
+      </p>
+      <p>装完<strong>关掉再重新打开 PowerShell</strong>，输入下面这句确认装好了（能显示版本号就对了）：</p>
+      <pre><code>git --version</code></pre>
+      <div class="note">
+        <span class="label">不想装 git？</span>
+        也可以直接在 GitHub 项目页点绿色的 <strong>Code → Download ZIP</strong>，下载后解压到一个文件夹。
+        这样可以跳过这一步和第 4 步的 <code>git clone</code>。
+      </div>
+    </li>
+
+    <li>
+      <h3>装 uv（用来跑 Python 程序）</h3>
+      <p><a href="https://docs.astral.sh/uv/">uv</a> 会自动帮你搞定 Python 和所有依赖，不用你单独装 Python。在 PowerShell 里粘贴运行：</p>
+      <pre><code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></pre>
+      <p>装完<strong>重开 PowerShell</strong>，确认：</p>
+      <pre><code>uv --version</code></pre>
+    </li>
+
+    <li>
+      <h3>装 PlatformIO（用来烧录固件）</h3>
+      <p>有了 uv，一句话就能装好烧录工具，它会给你一个 <code>pio</code> 命令：</p>
+      <pre><code>uv tool install platformio</code></pre>
+      <p>确认（显示版本号即可）：</p>
+      <pre><code>pio --version</code></pre>
+      <div class="warn">
+        <span class="label">如果提示找不到 pio</span>
+        重开一次 PowerShell；还不行就运行 <code>uv tool update-shell</code> 后再重开。
+      </div>
+    </li>
+
+    <li>
+      <h3>拿到这个项目的代码</h3>
+      <p>选一个放代码的位置（比如桌面），在 PowerShell 里把项目克隆下来，然后进入文件夹：</p>
+      <pre><code>git clone https://github.com/gaivrt/claude-desktop-buddy.git
+cd claude-desktop-buddy</code></pre>
+      <p>如果你第 1 步选了下载 ZIP，就直接解压，然后 <code>cd</code> 进解压出来的文件夹即可。</p>
+      <div class="note">
+        <span class="label">之后所有命令</span>
+        都在<strong>这个项目文件夹里</strong>运行。PowerShell 标题/路径显示在 <code>claude-desktop-buddy</code> 里就对了。
+      </div>
+    </li>
+
+    <li>
+      <h3>把固件烧进宠物</h3>
+      <p>用 <strong>USB-C 数据线</strong>把 M5StickC Plus 连到电脑，然后运行：</p>
+      <pre><code>pio run -t upload</code></pre>
+      <p>
+        首次会自动下载编译工具链（几分钟），之后烧录很快。看到
+        <code>[SUCCESS]</code> 就成了，宠物会自动重启。
+      </p>
+      <div class="warn">
+        <span class="label">如果报错「找不到串口 / no serial port」</span>
+        说明电脑没认出宠物。① 换一根<strong>数据线</strong>（有些线只供电不传数据）；
+        ② 装 <a href="https://ftdichip.com/drivers/vcp-drivers/">FTDI VCP 驱动</a>（M5StickC Plus 用的是 FTDI 串口芯片，少数 Windows 需手动装）；
+        装完在「设备管理器 → 端口(COM)」里能看到一个 COM 口就对了。
+      </div>
+    </li>
+
+    <li>
+      <h3>启动 companion 程序</h3>
+      <p>宠物保持连在电脑上。<strong>最简单：双击项目文件夹里的 <code>start-voice.bat</code></strong>。</p>
+      <p>或者在 PowerShell 里运行（和双击 .bat 等效）：</p>
+      <pre><code>uv run --with funasr --with torch --with torchaudio --with pyserial python -u companion/main.py</code></pre>
+      <div class="note">
+        <span class="label">首次启动会比较久</span>
+        程序要下载约 <strong>1 GB</strong> 的中文识别模型（FunASR），并加载约 <strong>50 秒</strong>。
+        请耐心等到出现这一行——看到它就代表准备好了：
+        <pre style="margin:10px 0 0"><code>ready — focus Claude desktop's message box, hold B and talk.</code></pre>
+        以后每次启动只加载、不再下载。<strong>这个窗口要一直开着</strong>，关掉就停了。
+      </div>
+
+      <h3 style="margin-top:30px">让它开机自动启动（推荐）</h3>
+      <p>不想每次手动开？让 companion 跟着 Windows 一起启动，开机就在后台待命：</p>
+      <ol style="margin:12px 0; padding-left:26px; line-height:1.9">
+        <li>右键项目里的 <code>start-voice.bat</code> → <strong>发送到 → 桌面快捷方式</strong>。</li>
+        <li>按 <kbd>Win + R</kbd>，输入 <code>shell:startup</code>，回车——会打开 Windows 的「启动」文件夹。</li>
+        <li>把刚才桌面上那个快捷方式<strong>剪切粘贴</strong>进这个「启动」文件夹。</li>
+      </ol>
+      <p>搞定。下次开机登录后，companion 自动启动。想取消，就把快捷方式从「启动」文件夹里删掉。</p>
+      <div class="note">
+        <span class="label">不想每次弹出黑窗口？</span>
+        项目里还有个 <code>start-voice-hidden.vbs</code>，它会<strong>无窗口</strong>地启动 companion。
+        把上面第 1 步改成给 <code>start-voice-hidden.vbs</code> 建快捷方式即可。
+        代价是看不到日志——建议先用带窗口的 <code>.bat</code> 确认一切正常，再换成无窗口版。
+      </div>
+    </li>
+  </ol>
+  <p>六步走完，就可以去下一节<a href="#use">用起来</a>了。</p>
+</section>
+
+<section id="use">
+  <h2><span class="n">05</span>怎么用</h2>
+  <ol class="steps">
+    <li>
+      <h3>切到 Voice 屏</h3>
+      <p>按宠物正面的 <kbd>A</kbd> 键循环屏幕，到 <strong>Voice</strong> 屏——一个绿色麦克风图标 + <code>ready</code>。</p>
+    </li>
+    <li>
+      <h3>把光标放进 Claude</h3>
+      <p>点一下 Claude desktop 的消息输入框，让光标在里面闪（转出的字会落到当前聚焦的窗口）。</p>
+    </li>
+    <li>
+      <h3>按住 B 说话</h3>
+      <p>按住宠物右侧的 <kbd>B</kbd> 键说中文——麦克风变成<strong>橙色并呼吸跳动</strong>表示正在录。说完<strong>松开</strong>。</p>
+    </li>
+    <li>
+      <h3>自动出字 + 自动发送</h3>
+      <p>松手约 1 秒后，中文自动出现在输入框，并<strong>自动按回车发送</strong>给 Claude。一气呵成。</p>
+    </li>
+  </ol>
+  <div class="note">
+    <span class="label">提示</span>
+    按住即录、松开即发。想要纯打字不发送，可以去掉 companion 里 <code>press_enter()</code> 那一行。
+  </div>
+</section>
+
+<section id="under">
+  <h2><span class="n">06</span>幕后：三个不显然的决定</h2>
+  <p>如果你想 fork 或调试，这三点值得知道——它们都是踩坑踩出来的。</p>
+
+  <h3>① 为什么是 115200 + ADPCM，而不是高波特率</h3>
+  <p>
+    实时 16 kHz / 16-bit 音频是 256 kbps，<code>115200</code> 串口扛不住，理论上该用
+    <code>921600</code> 这类高波特率。但实测下来——<strong>这块 M5 的 FTDI 在高波特率下收发全是乱码</strong>
+    （921600、1 Mbaud、160/240 MHz 都试过），只有 <code>115200</code> 稳定可靠。
+  </p>
+  <p>
+    所以方案是：保留可靠的 <code>115200</code>，把音频用 <strong>IMA ADPCM 压成 1/4</strong>
+    （256 kbps → ~64 kbps），正好塞进 115200 的有效带宽，实时无压力。ADPCM 对语音的损失很小，
+    FunASR 识别完全够用。
+  </p>
+  <div class="warn">
+    <span class="label">如果你换了别的板子</span>
+    高波特率能不能用是<strong>硬件相关</strong>的。如果你的板子高波特率正常，可以去掉 ADPCM、直接传原始 PCM，更简单。
+  </div>
+
+  <h3>② 为什么删掉了 BLE HID 键盘</h3>
+  <p>
+    原版 fork 曾用 BLE HID 键盘发 <kbd>Win+H</kbd> 触发 Windows 听写。但在 Windows 上，
+    设备一旦以「键盘」身份广播，<strong>系统会把它抢去当 HID 键盘用，挤掉 Claude desktop 需要的
+    BLE/NUS 连接</strong>——表现为「配对成功又立刻掉线」。
+  </p>
+  <p>
+    本方案根本不需要那个键盘（音频走 USB、文字靠下面的 SendInput），所以直接<strong>去掉 HID</strong>，
+    宠物变成纯 NUS 设备，Claude desktop 就能稳定连上了。
+  </p>
+
+  <h3>③ 为什么文字注入用 SendInput 而不是蓝牙键盘</h3>
+  <p>
+    BLE HID boot keyboard 只能发 US 键位的 keycode，<strong>打不出中文</strong>。
+    Windows 上把任意 Unicode 文本注入到聚焦窗口，靠的是
+    <code>SendInput</code> + <code>KEYEVENTF_UNICODE</code>——这只能由电脑端程序做，
+    所以 companion 是必须的。
+  </p>
+
+  <h3>串口帧协议（给改代码的人）</h3>
+  <pre><code>0xAA 0x55 | type(1) | len(2 LE) | payload | checksum(1)
+  type:  0x01 REC_START   0x02 AUDIO   0x03 REC_END   0x04 SUBMIT
+  AUDIO payload = [predictor:int16 LE][index:uint8] + ADPCM nibbles
+<span class="cmt">  同步字 + 校验和让 companion 能跳过设备打印的调试文本、坏帧自动重同步</span></code></pre>
+</section>
+
+<section id="trouble">
+  <h2><span class="n">07</span>故障排查</h2>
+  <table>
+    <tr><th>现象</th><th>怎么办</th></tr>
+    <tr><td>按 B 屏幕没反应</td><td>确认在 <strong>Voice 屏</strong>（绿麦克风 + ready），且没在菜单里。麦克风变橙 = 正在录。</td></tr>
+    <tr><td>录了但不出字</td><td>看 companion 窗口有没有 <code>● REC</code> 和转写文本。没有 <code>● REC</code> = 音频没到电脑：检查 USB 线、确认 companion 连的是宠物那个口。</td></tr>
+    <tr><td>字落到了别的窗口</td><td>注入跟随焦点。录完前先点一下 Claude 的输入框，让光标在里面。</td></tr>
+    <tr><td>companion 启动就退出</td><td>等它把 FunASR 下载/加载完（首次约 1 GB + 50 秒）。看到 <code>ready</code> 才算就绪。</td></tr>
+    <tr><td>串口偶尔断</td><td>companion 自带自动重连，断了会等宠物回来。USB 线接触不良也会掉，插紧。</td></tr>
+    <tr><td>Claude desktop 连不上宠物</td><td>这是另一条独立的蓝牙链路（和语音无关）。语音只走 USB，不需要这条蓝牙连接也能用。</td></tr>
+  </table>
+</section>
+
+<footer>
+  Claude Desktop Buddy · 中文语音输入 fork 功能 ·
+  <a href="https://github.com/anthropics/claude-desktop-buddy">原项目</a> ·
+  转写由 <a href="https://github.com/modelscope/FunASR">FunASR</a> 提供 ·
+  本指南随仓库一同分发。
+</footer>
+
+</div>
+</body>
+</html>
